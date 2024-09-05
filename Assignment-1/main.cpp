@@ -211,7 +211,7 @@ void transform_vector()
 
     // Extract the transformed vector and print it
     Eigen::Vector3d vw = V_world_H.head<3>();
-    std::cout << "Transformed vector in frame {w}: " << vw.transpose() << std::endl;
+    std::cout << "Transformed vector in frame {w}:\n " << vw  << std::endl;
 }
 
 
