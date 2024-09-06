@@ -2,6 +2,7 @@
 
 #include <Eigen/Dense>
 #include <math/math.h>
+
 // Constants and equals
 bool math::floatEquals(double a, double b)
 {
@@ -17,7 +18,36 @@ Eigen::VectorXd math::twist(const Eigen::Vector3d &w, const Eigen::Vector3d &v) 
     return twist;
 }
 
-// Create a rotation matrix from rotating θ degrees about the principal axis x.
+// Create a screw axis from the axis of rotation, "s", point on the axis, "q" and pitch, "h".
+Eigen::VectorXd math::screw_axis(const Eigen::Vector3d &q, const Eigen::Vector3d &s, double h){
+    Eigen::VectorXd screw_axis(6);
+    Eigen::Vector3d v = s.cross(q) + h * s;
+    screw_axis << s, v;
+    return screw_axis;
+}
+
+// Create the adjoint representation of a homogenous transformation matrix
+Eigen::MatrixXd math::adjoint_matrix(const Eigen::Matrix4d &tf){
+    // Define Adjoint matrix as 6x6
+    Eigen::MatrixXd AdT(6, 6);
+
+    //Fetch rotation matrix and translation vector from homogenous transformation matrix
+    Eigen::Matrix3d R = tf.block<3, 3>(0, 0);
+    Eigen::Vector3d p = tf.block<3, 1>(0, 3);
+    // Define zero matrix
+    Eigen::Matrix3d zero = Eigen::Matrix3d::Zero();
+
+    // Construct AdT matrix
+    AdT << R,zero, skew_symmetric(p) * R, R;
+    return AdT;
+}
+
+// Calculate the cotangent of x in RADIANS
+double math::cot(double x){
+    return std::cos(x) / std::sin(x); // Inverse of sin/cos = tan
+}
+
+// Create a rotation matrix from rotating about the principal axis x.
 Eigen::Matrix3d math::rotate_x(double radians)
 {
     Eigen::Matrix3d matrix;
@@ -29,7 +59,7 @@ Eigen::Matrix3d math::rotate_x(double radians)
     return matrix;
 }
 
-// Create a rotation matrix from rotating θ degrees about the principal axis y.
+// Create a rotation matrix from rotating about the principal axis y.
 Eigen::Matrix3d math::rotate_y(double radians)
 {
     Eigen::Matrix3d matrix;
@@ -41,7 +71,7 @@ Eigen::Matrix3d math::rotate_y(double radians)
     return matrix;
 }
 
-// Create a rotation matrix from rotating θ degrees about the principal axis z.
+// Create a rotation matrix from rotating about the principal axis z.
 Eigen::Matrix3d math::rotate_z(double radians)
 {
     Eigen::Matrix3d matrix;
@@ -88,10 +118,18 @@ Eigen::Vector3d math::euler_zyx_from_rotation(Eigen::Matrix3d &r) {
         a = std::atan2(r(1,0), r(0,0));
         c = std::atan2(r(2,1), r(2,2));
     }
-    return Eigen::Vector3d(a, b, c);
+    return {a,b,c};
 }
 
-
+// Function to calculate the skew symmetric matrix of a vector v
+Eigen::Matrix3d math::skew_symmetric(const Eigen::Vector3d &v)
+ {
+    Eigen::Matrix3d skewMat;
+    skewMat <<    0, -v.z(),  v.y(),
+               v.z(),     0, -v.x(),
+              -v.y(),  v.x(),     0;
+    return skewMat;
+}
 
 
 

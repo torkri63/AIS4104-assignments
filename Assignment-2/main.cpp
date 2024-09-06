@@ -1,4 +1,3 @@
-#include <Eigen/Dense>
 #include <iostream>
 #include <math/math.h>
 
