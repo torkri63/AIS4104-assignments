@@ -22,11 +22,11 @@ namespace math {
     Eigen::Matrix3d exponential_to_rotation_matrix(const Eigen::Vector3d &w, double theta);
     std::pair<Eigen::Vector3d, double> rotation_matrix_to_exponential(const Eigen::Matrix3d &r);
     Eigen::Matrix4d exponential_to_transformation_matrix(const Eigen::Vector3d &w, const Eigen::Vector3d &v, double theta);
+    Eigen::Matrix4d exponential_to_transformation_matrix(const Eigen::VectorXd &screw, double theta);
     std::pair<Eigen::Vector3d, double> transformation_matrix_to_exponential(const Eigen::Matrix4d &T);
     void print_pose(const std::string &label, const Eigen::Matrix4d &tf);
     Eigen::Matrix4d planar_3r_fk_transform(const std::vector<double> &joint_positions);
     Eigen::Matrix4d planar_3r_fk_screw(const std::vector<double> &joint_positions);
-    Eigen::Matrix4d exponential_to_transformation_matrix(const Eigen::VectorXd &screw, double theta);
     }
 
 #endif

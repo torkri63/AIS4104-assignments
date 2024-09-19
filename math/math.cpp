@@ -18,9 +18,9 @@ Eigen::Matrix3d math::rotate_x(double radians)
     Eigen::Matrix3d matrix;
     // Rotate about the x-axis, R_x
     matrix <<
-        1, 0, 0,
-        0, std::cos(radians), -std::sin(radians),
-        0, std::sin(radians), std::cos(radians);
+        1.0, 0.0, 0.0,
+        0.0, std::cos(radians), -std::sin(radians),
+        0.0, std::sin(radians), std::cos(radians);
     return matrix;
 }
 
@@ -30,9 +30,9 @@ Eigen::Matrix3d math::rotate_y(double radians)
     Eigen::Matrix3d matrix;
     // Rotate about the y-axis, R_y
     matrix <<
-        std::cos(radians), 0, std::sin(radians),
-        0, 1, 0,
-        -std::sin(radians), 0, std::cos(radians);
+        std::cos(radians), 0.0, std::sin(radians),
+        0.0, 1.0, 0.0,
+        -std::sin(radians), 0.0, std::cos(radians);
     return matrix;
 }
 
@@ -42,9 +42,9 @@ Eigen::Matrix3d math::rotate_z(double radians)
     Eigen::Matrix3d matrix;
     // Rotate about the z-axis, R_z
     matrix <<
-        std::cos(radians), -std::sin(radians), 0,
-        std::sin(radians), std::cos(radians), 0,
-        0, 0, 1;
+        std::cos(radians), -std::sin(radians), 0.0,
+        std::sin(radians), std::cos(radians), 0.0,
+        0.0, 0.0, 1.0;
     return matrix;
 }
 
@@ -52,9 +52,9 @@ Eigen::Matrix3d math::rotate_z(double radians)
 Eigen::Matrix3d math::skew_symmetric(const Eigen::Vector3d &v)
 {
     Eigen::Matrix3d skewMat;
-    skewMat <<    0, -v.z(),  v.y(),
-               v.z(),     0, -v.x(),
-              -v.y(),  v.x(),     0;
+    skewMat <<    0.0, -v.z(),  v.y(),
+               v.z(),     0.0, -v.x(),
+              -v.y(),  v.x(),     0.0;
     return skewMat;
 }
 
@@ -149,14 +149,14 @@ double math::cot(double x){
 // Create rotation matrix from Euler angles YZX
 Eigen::Matrix3d math::rotation_matrix_from_euler_yzx(const Eigen::Vector3d &e) {
     // Euler angles (IN RADIANS)
-    double alpha = e[0]; // Rotation around Z-axis
-    double beta = e[1];  // Rotation around Y-axis
-    double gamma = e[2]; // Rotation around X-axis
+    const double alpha = e[0]; // Rotation around Z-axis
+    const double beta = e[1];  // Rotation around Y-axis
+    const double gamma = e[2]; // Rotation around X-axis
 
     // Rotate around the individual matrices
-    Eigen::Matrix3d Rz = rotate_z(beta);
-    Eigen::Matrix3d Ry = rotate_y(alpha);
-    Eigen::Matrix3d Rx = rotate_x(gamma);
+    const Eigen::Matrix3d Rz = rotate_z(beta);
+    const Eigen::Matrix3d Ry = rotate_y(alpha);
+    const Eigen::Matrix3d Rx = rotate_x(gamma);
 
     // Combine the rotations to a ZYX Euler rotation
     Eigen::Matrix3d rotation_matrix = Ry * Rz * Rx;
@@ -176,15 +176,15 @@ Eigen::VectorXd math::sum_of_wrenches() {
     Fh << 0.0, 0.0, 0.0, 0.0, -5, 0.0;
     Fa << 0.0, 0.0, 0.0, 0.0, 0.0, 1.0;
     Thf <<
-    1, 0, 0, -0.1,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1;
+    1.0, 0.0, 0.0, -0.1,
+    0.0, 1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0;
     Taf <<
-    1, 0, 0, -0.25,
-    0, 0, 1, 0,
-    0, -1, 0, 0,
-    0, 0, 0, 1;
+    1.0, 0.0, 0.0, -0.25,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, -1.0, 0.0, 0.0,
+    0.0, 0.0, 0.0, 1.0;
     // Calculate Ff
     Ff = adjoint_matrix(Thf).transpose() * Fh + adjoint_matrix(Taf).transpose() * Fa;
     return Ff;
@@ -194,11 +194,11 @@ Eigen::VectorXd math::sum_of_wrenches() {
 
 // Implement the matrix exponential for rotation matrices
 Eigen::Matrix3d math::exponential_to_rotation_matrix(const Eigen::Vector3d &w, double theta){
-    Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
-    Eigen::Matrix3d w_hat = skew_symmetric(w);  // Skew-symmetric of vector omega
+    const Eigen::Matrix3d I = Eigen::Matrix3d::Identity();
+    const Eigen::Matrix3d w_hat = skew_symmetric(w);  // Skew-symmetric of vector omega
 
     // Rodrigues formula to compute rotation matrix
-    Eigen::Matrix3d R = I + sin(theta) * w_hat + (1-cos(theta)) * w_hat*w_hat;
+    Eigen::Matrix3d R = I + sin(theta) * w_hat + (1.0-cos(theta)) * w_hat*w_hat;
     return R;
 }
 
@@ -227,7 +227,7 @@ Eigen::Matrix4d math::exponential_to_transformation_matrix(const Eigen::Vector3d
     const Eigen::Matrix3d R = exponential_to_rotation_matrix(w, theta);
 
     // Compute the translation part of T
-    const Eigen::Vector3d p = (Eigen::Matrix3d::Identity()*theta + (1-cos(theta))*w_hat + (theta- sin(theta))*w_hat*w_hat) * v;
+    const Eigen::Vector3d p = (Eigen::Matrix3d::Identity()*theta + (1.0-cos(theta))*w_hat + (theta- sin(theta))*w_hat*w_hat) * v;
 
     // Construct the final transformation matrix
     Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
@@ -242,10 +242,10 @@ std::pair<Eigen::Vector3d, double> math::transformation_matrix_to_exponential(co
     Eigen::Vector3d p = T.block<3, 1>(0, 3);  // Extract translation vector
 
     // Compute the rotation angle theta
-    double theta = std::acos((R.trace() - 1) / 2.0) * rad_to_deg;
+    double theta = std::acos((R.trace() - 1.0) / 2.0) * rad_to_deg;
 
     // Compute the skew-symmetric matrix omega_hat
-    Eigen::Matrix3d omega_hat = (R - R.transpose()) / (2 * std::sin(theta*deg_to_rad));
+    Eigen::Matrix3d omega_hat = (R - R.transpose()) / (2.0 * std::sin(theta*deg_to_rad));
 
     // Extract the rotation vector omega from the skew-symmetric omega_hat
     Eigen::Vector3d omega;
@@ -282,9 +282,9 @@ void math::print_pose(const std::string &label, const Eigen::Matrix4d &T) {
 
 Eigen::Matrix4d math::planar_3r_fk_transform(const std::vector<double> &joint_positions) {
     // Extract joint positions
-    double theta1 = joint_positions[0]*math::deg_to_rad;
-    double theta2 = joint_positions[1]*math::deg_to_rad;
-    double theta3 = joint_positions[2]*math::deg_to_rad;
+    double theta1 = joint_positions[0]*deg_to_rad;
+    double theta2 = joint_positions[1]*deg_to_rad;
+    double theta3 = joint_positions[2]*deg_to_rad;
 
     // Define homogenous transfer matrices
     Eigen::Matrix4d T01 = create_transformation_matrix(rotate_z(theta1), Eigen::Vector3d(0, 0, 0));
@@ -298,14 +298,9 @@ Eigen::Matrix4d math::planar_3r_fk_transform(const std::vector<double> &joint_po
 
 Eigen::Matrix4d math::planar_3r_fk_screw(const std::vector<double> &joint_positions) {
     // Define the screw axes for each joint
-    Eigen::VectorXd S1 = screw_axis({0,0,0}, {0,0,1}, 0);
-    Eigen::VectorXd S2 = screw_axis({L1,0,0}, {0,0,1}, 0);
-    Eigen::VectorXd S3 = screw_axis({L1 + L2,0,0}, {0,0,1}, 0);
-
-    /*
-    Eigen::Vector3d w1(0, 0, 1), w2(0, 0, 1), w3(0, 0, 1);
-    Eigen::Vector3d v1(0, 0, 0), v2(0, -L1, 0), v3(0, -(L1 + L2), 0);
-    */
+    Eigen::VectorXd S1 = screw_axis({0.0,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
+    Eigen::VectorXd S2 = screw_axis({L1,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
+    Eigen::VectorXd S3 = screw_axis({L1 + L2,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
 
     // Extract joint positions
     double theta1 = joint_positions[0]*deg_to_rad;
@@ -317,7 +312,7 @@ Eigen::Matrix4d math::planar_3r_fk_screw(const std::vector<double> &joint_positi
     Eigen::Matrix4d T12 = exponential_to_transformation_matrix(S2, theta2);
     Eigen::Matrix4d T23 = exponential_to_transformation_matrix(S3, theta3);
 
-    Eigen::Matrix4d M = create_transformation_matrix(Eigen::Matrix3d::Identity(), {L1+L2+L3, 0, 0} );
+    Eigen::Matrix4d M = create_transformation_matrix(Eigen::Matrix3d::Identity(), {L1+L2+L3, 0.0, 0.0} );
     // Final transformation matrix
     Eigen::Matrix4d T04 = T01 * T12 * T23 * M;
     return T04;

@@ -3,7 +3,7 @@
 
 int main() {
     // Define euler angles, transform to rotation matrix and back
-    Eigen::Vector3d e = Eigen::Vector3d(60,45,30) * math::deg_to_rad;
+    Eigen::Vector3d e = Eigen::Vector3d(60.0,45.0,30.0) * math::deg_to_rad;
     Eigen::Matrix3d R = math::rotation_matrix_from_euler_zyx(e);
     Eigen::Vector3d ea = math::euler_zyx_from_rotation(R);
     std::cout << "\nTASK 1: \nImplementing algorithm, which receives euler zyx vector, transforms into rotation matrix and back to euler zyx vector" << std::endl;
@@ -12,9 +12,9 @@ int main() {
 
     // Given data task 2
     std::cout << "\nTASK 2: Wrenches\n " << std::endl;
-    Eigen::Vector3d fw(-30, 0, 0);  // Force in world frame
-    Eigen::Vector3d ts(0, 0, 2);    // Torque in sensor frame
-    Eigen::Vector3d ews = Eigen::Vector3d(60,-60,0) * math::deg_to_rad; // Euler angles
+    Eigen::Vector3d fw(-30.0, 0.0, 0.0);  // Force in world frame
+    Eigen::Vector3d ts(0.0, 0.0, 2.0);    // Torque in sensor frame
+    Eigen::Vector3d ews = Eigen::Vector3d(60.0,-60.0,0.0) * math::deg_to_rad; // Euler angles
     // Calculate force in sensor frame and torque in world frame from rotation matrix
     Eigen::Matrix3d R_ws = math::rotation_matrix_from_euler_yzx(ews); // Define rotation matrix from Euler angles YZX
     Eigen::Vector3d fs = R_ws.transpose() * fw; // Transform force from world- to sensor frame
