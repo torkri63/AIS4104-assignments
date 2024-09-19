@@ -51,6 +51,27 @@ int main() {
         std::cout << "----------------------------------------" << std::endl;
         math::print_pose("Pose for joint positions: [" + std::to_string(positions[0]) + ", " + std::to_string(positions[1]) + ", " + std::to_string(positions[2]) + "]", T);
     }
+
+    std::cout << "\nTASK 5: \n" << std::endl;
+    std::vector<std::vector<double>> test_positions_ur3e = {
+        {0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
+        {0.0, 0.0, 0.0, -90.0, 0.0, 0.0},
+        {0.0, -180.0, 0.0, 0.0, 0.0, 0.0},
+        {0.0, -90.0, 0.0, 0.0, 0.0, 0.0}
+    };
+
+    std::cout << "\nForward kinematics for UR3e using Product of Exponentials\n" << std::endl;
+    for (const std::vector<double> &positions : test_positions_ur3e) {
+        Eigen::Matrix4d T = math::ur3e_fk_screw(positions);
+        std::cout << "----------------------------------------" << std::endl;
+        math::print_pose("Pose for joint positions: [" + std::to_string(positions[0]) + ", " + std::to_string(positions[1]) + ", " + std::to_string(positions[2]) + ", " + std::to_string(positions[3]) + ", " + std::to_string(positions[4]) + ", " + std::to_string(positions[5]) + "]", T);
+    }
+    std::cout << "\nForward kinematics for UR3e using Transformation Matrices\n" << std::endl;
+    for (const std::vector<double> &positions : test_positions_ur3e) {
+        Eigen::Matrix4d T = math::ur3e_fk_transform(positions);
+        std::cout << "----------------------------------------" << std::endl;
+        math::print_pose("Pose for joint positions: [" + std::to_string(positions[0]) + ", " + std::to_string(positions[1]) + ", " + std::to_string(positions[2]) + ", " + std::to_string(positions[3]) + ", " + std::to_string(positions[4]) + ", " + std::to_string(positions[5]) + "]", T);
+    }
     return 0;
 }
 

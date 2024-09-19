@@ -10,7 +10,6 @@ bool math::floatEquals(double a, double b)
 }
 constexpr double rad_to_deg = 57.29578;
 constexpr double deg_to_rad = 0.01745;
-constexpr double L1 = 10.0, L2 = 10.0, L3 = 10;
 
 // Create a rotation matrix from rotating about the principal axis x.
 Eigen::Matrix3d math::rotate_x(double radians)
@@ -281,6 +280,8 @@ void math::print_pose(const std::string &label, const Eigen::Matrix4d &T) {
 }
 
 Eigen::Matrix4d math::planar_3r_fk_transform(const std::vector<double> &joint_positions) {
+    constexpr double l1 = 10, l2 = 10, l3 = 10;
+
     // Extract joint positions
     double theta1 = joint_positions[0]*deg_to_rad;
     double theta2 = joint_positions[1]*deg_to_rad;
@@ -288,35 +289,132 @@ Eigen::Matrix4d math::planar_3r_fk_transform(const std::vector<double> &joint_po
 
     // Define homogenous transfer matrices
     Eigen::Matrix4d T01 = create_transformation_matrix(rotate_z(theta1), Eigen::Vector3d(0, 0, 0));
-    Eigen::Matrix4d T12 = create_transformation_matrix(rotate_z(theta2), Eigen::Vector3d(L1, 0, 0));
-    Eigen::Matrix4d T23 = create_transformation_matrix(rotate_z(theta3), Eigen::Vector3d(L2, 0, 0));
-    Eigen::Matrix4d T34 = create_transformation_matrix(Eigen::Matrix3d::Identity(), Eigen::Vector3d(L3, 0, 0));
+    Eigen::Matrix4d T12 = create_transformation_matrix(rotate_z(theta2), Eigen::Vector3d(l1, 0, 0));
+    Eigen::Matrix4d T23 = create_transformation_matrix(rotate_z(theta3), Eigen::Vector3d(l2, 0, 0));
+    Eigen::Matrix4d T34 = create_transformation_matrix(Eigen::Matrix3d::Identity(), Eigen::Vector3d(l3, 0, 0));
     // Final transformation matrix
     Eigen::Matrix4d T04 = T01 * T12 * T23 * T34;
     return T04;
 }
 
 Eigen::Matrix4d math::planar_3r_fk_screw(const std::vector<double> &joint_positions) {
+    constexpr double l1 = 10, l2 = 10, l3 = 10;
+
     // Define the screw axes for each joint
-    Eigen::VectorXd S1 = screw_axis({0.0,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
-    Eigen::VectorXd S2 = screw_axis({L1,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
-    Eigen::VectorXd S3 = screw_axis({L1 + L2,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
+    const Eigen::VectorXd S1 = screw_axis({0.0,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
+    const Eigen::VectorXd S2 = screw_axis({l1,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
+    const Eigen::VectorXd S3 = screw_axis({l1 + l2,0.0,0.0}, {0.0,0.0,1.0}, 0.0);
 
     // Extract joint positions
-    double theta1 = joint_positions[0]*deg_to_rad;
-    double theta2 = joint_positions[1]*deg_to_rad;
-    double theta3 = joint_positions[2]*deg_to_rad;
+    const double theta1 = joint_positions[0]*deg_to_rad;
+    const double theta2 = joint_positions[1]*deg_to_rad;
+    const double theta3 = joint_positions[2]*deg_to_rad;
 
     // Calculate the transformation matrices using the PoE formula
-    Eigen::Matrix4d T01 = exponential_to_transformation_matrix(S1, theta1);
-    Eigen::Matrix4d T12 = exponential_to_transformation_matrix(S2, theta2);
-    Eigen::Matrix4d T23 = exponential_to_transformation_matrix(S3, theta3);
+    const Eigen::Matrix4d T01 = exponential_to_transformation_matrix(S1, theta1);
+    const Eigen::Matrix4d T12 = exponential_to_transformation_matrix(S2, theta2);
+    const Eigen::Matrix4d T23 = exponential_to_transformation_matrix(S3, theta3);
 
-    Eigen::Matrix4d M = create_transformation_matrix(Eigen::Matrix3d::Identity(), {L1+L2+L3, 0.0, 0.0} );
+    const Eigen::Matrix4d M = create_transformation_matrix(
+        Eigen::Matrix3d::Identity(),
+        {l1+l2+l3, 0.0, 0.0} );
+
     // Final transformation matrix
     Eigen::Matrix4d T04 = T01 * T12 * T23 * M;
     return T04;
 }
+
+// TASK 5
+
+Eigen::Matrix4d math::ur3e_fk_screw(const std::vector<double> &joint_positions) {
+    constexpr double h1 {0.15185}, l1 {-0.24355}, l2 {-0.2132}, h2 {0.08535},
+    w1{-0.13105}, w2{-0.0921};
+
+    // Define the screw axes for each joint of UR3e
+    const Eigen::VectorXd S1 = screw_axis({0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, 0.0); // Joint 1
+    const Eigen::VectorXd S2 = screw_axis({0.0, 0.0, h1}, {0.0, -1.0, 0.0}, 0.0); // Joint 2
+    const Eigen::VectorXd S3 = screw_axis({l1, 0.0, h1}, {0.0, -1.0, 0.0}, 0.0); // Joint 3
+    const Eigen::VectorXd S4 = screw_axis({l1 + l2, 0.0, h1}, {0.0, -1.0, 0.0}, 0.0); // Joint 4
+    const Eigen::VectorXd S5 = screw_axis({l1 + l2, w1, 0}, {0.0, 0.0, -1.0}, 0.0); // Joint 5
+    const Eigen::VectorXd S6 = screw_axis({l1 + l2, 0, h1 - h2}, {0.0, -1.0, 0.0}, 0.0); // Joint 6
+
+    // Extract joint positions
+    const double theta1 = joint_positions[0] * deg_to_rad;
+    const double theta2 = joint_positions[1] * deg_to_rad;
+    const double theta3 = joint_positions[2] * deg_to_rad;
+    const double theta4 = joint_positions[3] * deg_to_rad;
+    const double theta5 = joint_positions[4] * deg_to_rad;
+    const double theta6 = joint_positions[5] * deg_to_rad;
+
+    // Calculate the transformation matrices for each joint using the PoE formula
+    const Eigen::Matrix4d T01 = exponential_to_transformation_matrix(S1, theta1);
+    const Eigen::Matrix4d T12 = exponential_to_transformation_matrix(S2, theta2);
+    const Eigen::Matrix4d T23 = exponential_to_transformation_matrix(S3, theta3);
+    const Eigen::Matrix4d T34 = exponential_to_transformation_matrix(S4, theta4);
+    const Eigen::Matrix4d T45 = exponential_to_transformation_matrix(S5, theta5);
+    const Eigen::Matrix4d T56 = exponential_to_transformation_matrix(S6, theta6);
+
+    // Construct M matrix for zero configuration
+    Eigen::Matrix4d M; //ok
+    M <<  1,  0, 0, l1+l2,
+          0,  0,-1, w1+w2,
+          0,  1, 0, h1-h2,
+          0,  0, 0, 1;
+
+    // Final transformation matrix from base to end-effector
+    Eigen::Matrix4d T06 = T01 * T12 * T23 * T34 * T45 * T56 * M;
+    return T06;
+}
+
+/*Eigen::Matrix4d math::ur3e_fk_transform(const std::vector<double> &joint_positions) {
+    constexpr double h1 {0.15185}, l1 {-0.24355}, l2 {-0.2132}, h2 {0.08535},
+    w1{-0.13105}, w2{-0.0921};
+
+    // Extract joint positions
+    const double theta1 = joint_positions[0] * deg_to_rad;
+    const double theta2 = joint_positions[1] * deg_to_rad;
+    const double theta3 = joint_positions[2] * deg_to_rad;
+    const double theta4 = joint_positions[3] * deg_to_rad;
+    const double theta5 = joint_positions[4] * deg_to_rad;
+    const double theta6 = joint_positions[5] * deg_to_rad;
+
+    // Define homogenous transfer matrices
+    const Eigen::Matrix4d T01 = create_transformation_matrix(rotate_z(theta1), {0,0,h1});
+    const Eigen::Matrix4d T12 = create_transformation_matrix(rotate_y(theta2), {0,w1,0});
+    const Eigen::Matrix4d T23 = create_transformation_matrix(rotate_y(theta3), {l1,0,0});
+    const Eigen::Matrix4d T34 = create_transformation_matrix(rotate_y(theta4), {l2,0,0});
+    const Eigen::Matrix4d T45 = create_transformation_matrix(rotate_z(theta5), {0,0,-h2});
+    const Eigen::Matrix4d T56 = create_transformation_matrix(rotate_y(theta6), {0,w2,0});
+
+    Eigen::Matrix4d T06 = T01 * T12 * T23 * T34 * T45 * T56;
+    return T06;
+}*/
+
+Eigen::Matrix4d math::ur3e_fk_transform(const std::vector<double> &joint_positions) {
+    constexpr double h1 {0.15185}, l1 {-0.24355}, l2 {-0.2132}, h2 {0.08535},
+                     w1 {-0.13105}, w2 {-0.0921};
+
+    // Extract joint positions
+    const double theta1 = joint_positions[0] * deg_to_rad;
+    const double theta2 = joint_positions[1] * deg_to_rad;
+    const double theta3 = joint_positions[2] * deg_to_rad;
+    const double theta4 = joint_positions[3] * deg_to_rad;
+    const double theta5 = joint_positions[4] * deg_to_rad;
+    const double theta6 = joint_positions[5] * deg_to_rad;
+
+    // Adjust rotation angles to match negative axes
+    const Eigen::Matrix4d T01 = create_transformation_matrix(rotate_z(theta1),     {0, 0, h1});
+    const Eigen::Matrix4d T12 = create_transformation_matrix(rotate_y(-theta2),    {0, w1, 0});
+    const Eigen::Matrix4d T23 = create_transformation_matrix(rotate_y(-theta3),    {l1, 0, 0});
+    const Eigen::Matrix4d T34 = create_transformation_matrix(rotate_y(-theta4),    {l2, 0, 0});
+    const Eigen::Matrix4d T45 = create_transformation_matrix(rotate_z(-theta5),    {0, 0, -h2});
+    const Eigen::Matrix4d T56 = create_transformation_matrix(rotate_y(-theta6),    {0, w2, 0});
+
+    // Final transformation matrix from base to end-effector
+    Eigen::Matrix4d T06 = T01 * T12 * T23 * T34 * T45 * T56;
+    return T06;
+}
+
 
 
 

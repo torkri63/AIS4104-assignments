@@ -27,6 +27,8 @@ namespace math {
     void print_pose(const std::string &label, const Eigen::Matrix4d &tf);
     Eigen::Matrix4d planar_3r_fk_transform(const std::vector<double> &joint_positions);
     Eigen::Matrix4d planar_3r_fk_screw(const std::vector<double> &joint_positions);
+    Eigen::Matrix4d ur3e_fk_screw(const std::vector<double> &joint_positions);
+    Eigen::Matrix4d ur3e_fk_transform(const std::vector<double> &joint_positions);
     }
 
 #endif
