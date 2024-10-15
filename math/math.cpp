@@ -2,6 +2,9 @@
 
 #include <Eigen/Dense>
 #include <math/math.h>
+#include <numeric>
+#include <functional>
+#include <fstream>
 
 // Constants and equals
 bool math::floatEquals(double a, double b)
@@ -84,7 +87,7 @@ Eigen::Matrix4d math::create_transformation_matrix(const Eigen::Matrix3d &R, con
 // ASSIGNMENT 2
 
 // Compute Euler angles ZYX from rotation matrix
-Eigen::Vector3d math::euler_zyx_from_rotation(Eigen::Matrix3d &r) {
+Eigen::Vector3d math::euler_zyx_from_rotation(const Eigen::Matrix3d &r) {
     double a, b, c;
     if(floatEquals(r(2, 0), -1.0))
     {
@@ -235,6 +238,10 @@ Eigen::Matrix4d math::exponential_to_transformation_matrix(const Eigen::Vector3d
     return T;
 }
 
+Eigen::Matrix4d math::matrix_exponential(const Eigen::VectorXd &screw, double theta) {
+    return exponential_to_transformation_matrix(screw.head<3>(), screw.tail<3>(), theta);
+}
+
 // Implement matrix logarithm for Transformation matrices
 std::pair<Eigen::Vector3d, double> math::transformation_matrix_to_exponential(const Eigen::Matrix4d &T) {
     Eigen::Matrix3d R = T.block<3, 3>(0, 0);  // Extract rotation matrix
@@ -283,15 +290,15 @@ Eigen::Matrix4d math::planar_3r_fk_transform(const std::vector<double> &joint_po
     constexpr double l1 = 10, l2 = 10, l3 = 10;
 
     // Extract joint positions
-    double theta1 = joint_positions[0]*deg_to_rad;
-    double theta2 = joint_positions[1]*deg_to_rad;
-    double theta3 = joint_positions[2]*deg_to_rad;
+    const double theta1 = joint_positions[0]*deg_to_rad;
+    const double theta2 = joint_positions[1]*deg_to_rad;
+    const double theta3 = joint_positions[2]*deg_to_rad;
 
     // Define homogenous transfer matrices
-    Eigen::Matrix4d T01 = create_transformation_matrix(rotate_z(theta1), Eigen::Vector3d(0, 0, 0));
-    Eigen::Matrix4d T12 = create_transformation_matrix(rotate_z(theta2), Eigen::Vector3d(l1, 0, 0));
-    Eigen::Matrix4d T23 = create_transformation_matrix(rotate_z(theta3), Eigen::Vector3d(l2, 0, 0));
-    Eigen::Matrix4d T34 = create_transformation_matrix(Eigen::Matrix3d::Identity(), Eigen::Vector3d(l3, 0, 0));
+    const Eigen::Matrix4d T01 = create_transformation_matrix(rotate_z(theta1), Eigen::Vector3d(0, 0, 0));
+    const Eigen::Matrix4d T12 = create_transformation_matrix(rotate_z(theta2), Eigen::Vector3d(l1, 0, 0));
+    const Eigen::Matrix4d T23 = create_transformation_matrix(rotate_z(theta3), Eigen::Vector3d(l2, 0, 0));
+    const Eigen::Matrix4d T34 = create_transformation_matrix(Eigen::Matrix3d::Identity(), Eigen::Vector3d(l3, 0, 0));
     // Final transformation matrix
     Eigen::Matrix4d T04 = T01 * T12 * T23 * T34;
     return T04;
@@ -366,30 +373,6 @@ Eigen::Matrix4d math::ur3e_fk_screw(const std::vector<double> &joint_positions) 
     return T06;
 }
 
-/*Eigen::Matrix4d math::ur3e_fk_transform(const std::vector<double> &joint_positions) {
-    constexpr double h1 {0.15185}, l1 {-0.24355}, l2 {-0.2132}, h2 {0.08535},
-    w1{-0.13105}, w2{-0.0921};
-
-    // Extract joint positions
-    const double theta1 = joint_positions[0] * deg_to_rad;
-    const double theta2 = joint_positions[1] * deg_to_rad;
-    const double theta3 = joint_positions[2] * deg_to_rad;
-    const double theta4 = joint_positions[3] * deg_to_rad;
-    const double theta5 = joint_positions[4] * deg_to_rad;
-    const double theta6 = joint_positions[5] * deg_to_rad;
-
-    // Define homogenous transfer matrices
-    const Eigen::Matrix4d T01 = create_transformation_matrix(rotate_z(theta1), {0,0,h1});
-    const Eigen::Matrix4d T12 = create_transformation_matrix(rotate_y(theta2), {0,w1,0});
-    const Eigen::Matrix4d T23 = create_transformation_matrix(rotate_y(theta3), {l1,0,0});
-    const Eigen::Matrix4d T34 = create_transformation_matrix(rotate_y(theta4), {l2,0,0});
-    const Eigen::Matrix4d T45 = create_transformation_matrix(rotate_z(theta5), {0,0,-h2});
-    const Eigen::Matrix4d T56 = create_transformation_matrix(rotate_y(theta6), {0,w2,0});
-
-    Eigen::Matrix4d T06 = T01 * T12 * T23 * T34 * T45 * T56;
-    return T06;
-}*/
-
 Eigen::Matrix4d math::ur3e_fk_transform(const std::vector<double> &joint_positions) {
     constexpr double h1 {0.15185}, l1 {-0.24355}, l2 {-0.2132}, h2 {0.08535},
                      w1 {-0.13105}, w2 {-0.0921};
@@ -414,6 +397,196 @@ Eigen::Matrix4d math::ur3e_fk_transform(const std::vector<double> &joint_positio
     Eigen::Matrix4d T06 = T01 * T12 * T23 * T34 * T45 * T56;
     return T06;
 }
+
+// ASSIGNMENT 3
+
+// TASK 1
+
+Eigen::Matrix3d math::rotation_matrix(const Eigen::Matrix4d &T) {
+    Eigen::Matrix3d R = T.block<3, 3>(0, 0);  // Extract rotation matrix
+    return R;
+}
+
+void math::print_pose(const Eigen::Matrix4d &tf, const std::string& label) {
+    Eigen::Vector3d pos = tf.block<3, 1> (0,3);
+    Eigen::Vector3d euler = euler_zyx_from_rotation(rotation_matrix(tf));
+
+    if(!label.empty())
+        std::cout << label << " ";
+    std::cout << "pos: " << pos.transpose() << "ZYX: " << euler.transpose() * math::rad_to_deg << std::endl;
+}
+
+Eigen::VectorXd math::std_vector_to_eigen(const std::vector<double> &v) {
+    Eigen::VectorXd r(v.size());
+    for (int i = 0; i < v.size(); i++)
+        r(i) = v[i];
+    return r;
+}
+
+bool math::is_average_below_eps(const std::vector<double> &values, double eps, uint8_t n_values) {
+    if (values.size() < n_values)
+        return false;
+    const double sum = std::accumulate(values.end() - n_values, values.end(), 0.0);
+    return std::abs(sum / n_values) < eps;;
+}
+
+std::pair<Eigen::Matrix4d, std::vector<Eigen::VectorXd>> math::ur3e_space_chain() {
+    constexpr double h1 {0.15185}, l1 {-0.24355}, l2 {-0.2132}, h2 {0.08535},
+    w1{-0.13105}, w2{-0.0921};
+
+    Eigen::Matrix3d MR = rotate_y(-90*deg_to_rad)* rotate_x(-90*deg_to_rad) * rotate_z(-90*deg_to_rad);
+    Eigen::Matrix4d M = create_transformation_matrix(MR, Eigen::Vector3d(l1 + l2, w1 + w2, h1 - h2));
+
+
+    std::vector<Eigen::VectorXd> screws {
+        screw_axis({0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, 0.0), // Joint 1
+        screw_axis({0.0, 0.0, h1}, {0.0, -1.0, 0.0}, 0.0), // Joint 2
+        screw_axis({l1, 0.0, h1}, {0.0, -1.0, 0.0}, 0.0), // Joint 3
+        screw_axis({l1 + l2, 0.0, h1}, {0.0, -1.0, 0.0}, 0.0), // Joint 4
+        screw_axis({l1 + l2, w1, 0}, {0.0, 0.0, -1.0}, 0.0), // Joint 5
+        screw_axis({l1 + l2, 0, h1 - h2}, {0.0, -1.0, 0.0}, 0.0) // Joint 6
+    };
+    return std::make_pair(M, screws);
+}
+
+Eigen::Matrix4d math::ur3e_space_fk(const Eigen::VectorXd &joint_positions) {
+    // Get space frame parameters
+    auto [M, space_screws] = ur3e_space_chain();
+
+    // Compute T06 by product of exponential
+    Eigen::Matrix4d T06 = Eigen::Matrix4d::Identity();
+    for(int  i = 0; i < joint_positions.size(); i++)
+        T06 *= matrix_exponential(space_screws[i], joint_positions[i]);
+    return T06 * M;
+}
+
+std::pair<Eigen::Matrix4d, std::vector<Eigen::VectorXd>> math::ur3e_body_chain(){
+    // Get the space frame parameters
+    auto [M, space_screws] = ur3e_space_chain();
+
+    // Compute the inverse of M to transform space screws into body screws
+    Eigen::Matrix4d M_inv = M.inverse();
+
+    // Adjoint of each inverse times the screw
+    std::vector<Eigen::VectorXd> body_screws;
+    for (const auto& screw : space_screws)
+        body_screws.emplace_back(adjoint_matrix(M_inv) * screw);
+
+    // Return the matrix M and the body screw axes
+    return std::make_pair(M, body_screws);
+}
+
+Eigen::Matrix4d math::ur3e_body_fk(const Eigen::VectorXd &joint_positions){
+    // Get the body frame transformation matrix and screw axes from ur3e_body_chain
+    auto [M, body_screws] = ur3e_body_chain();
+
+    // Compute T06 by product of exponential
+    Eigen::Matrix4d T06 = Eigen::Matrix4d::Identity();
+    for(int  i = 0; i < joint_positions.size(); i++)
+        T06 *= matrix_exponential(body_screws[i], joint_positions[i]);
+    return M * T06;
+}
+
+// TASK 2
+
+std::pair<uint32_t, double> math::newton_raphson_root_find(const std::function<double(double)> &f, double x_0, double dx_0, double eps) {
+    double theta = x_0;      // Initial guess for root
+    uint32_t iteration_count = 0.0;  // Iteration counter
+    constexpr double max_iterations = 100.0;
+
+        while (iteration_count < max_iterations) {
+        // Numerical approximation of the derivative
+        double f_dot = (f(theta + dx_0) - f(theta) )/ dx_0;
+
+        // Update the estimate for the root using the Newton-Raphson method
+        double next_theta = theta - f(theta) / f_dot;
+
+        // Check for convergence using the function value
+        if (std::abs(f(theta)) < eps) {
+            std::cout << "Convergence due to f(theta) = 0 " << std::endl;
+            return std::make_pair(iteration_count, theta); // Converged, return the root and number of iterations
+        }
+
+        // Update x for the next iteration
+        theta = next_theta;
+        ++iteration_count;
+    }
+
+    // If maximum iterations reached without convergence, return the last estimate and iteration count
+    std::cerr << "Warning: Maximum iterations reached without convergence." << std::endl;
+    return std::make_pair(iteration_count, theta);
+}
+
+std::pair<uint32_t, double> math::gradient_descent_root_find(const std::function<double(double)> &f, double x_0, double gamma, double dx_0, double eps) {
+    uint32_t iteration_count = 0; // Iteration counter
+
+    double previous_x = x_0; // Initial guess
+    double x = x_0 - gamma * ((f(x_0 + dx_0) - f(x_0)) / dx_0);  // Set initial previous x value for error calculation
+
+    // Calculate initial error using the function values at initial guesses
+    double error = std::abs(f(x));
+    double previous_error = std::abs(f(previous_x));
+
+    while (error > eps) {
+        // Update the estimate for the root using the gradient descent step
+        double next_x = x - gamma * (error - previous_error) / (x - previous_x);
+
+        // Update previous and current values for the next iteration
+        previous_x = x;
+        x = next_x;
+        // Update error values
+        previous_error = error;
+        error = std::abs(f(x));
+        ++iteration_count;
+
+        if (iteration_count > 250) {
+            std::cerr << "Maximum iterations reached"  << std::endl;
+            break;
+        }
+    }
+    return std::make_pair(iteration_count, x);
+}
+
+// TASK 3
+
+Eigen::MatrixXd math::ur3e_space_jacobian(const Eigen::VectorXd &current_joint_positions) {
+    Eigen::MatrixXd space_jacobian(6, 6); // Initialize space Jacobian
+    auto [M, space_screws ] = ur3e_space_chain(); // Fetch M matrix and screws
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();  // Initialize Transformation matrix
+
+    for (int i = 0; i < space_screws.size(); i++) {
+        if (i == 0) { // Set first column of Space Jacobian to first screw
+            space_jacobian.block<6, 1> (0, i) = space_screws[i];
+            continue;
+        }
+        Eigen::MatrixXd adj;
+        T *= matrix_exponential(space_screws[i-1], current_joint_positions[i-1]);
+        adj = adjoint_matrix(T);  // Define Adjoint matrix. (Transform screw axis from one fram to next)
+        space_jacobian.block<6, 1> (0, i) = adj * space_screws[i]; // Insert adj * screw into next column of jacobian
+    }
+    return space_jacobian;
+}
+
+Eigen::MatrixXd math::ur3e_body_jacobian(const Eigen::VectorXd &current_joint_positions){
+    Eigen::MatrixXd body_jacobian(6, 6); // Initialize body Jacobian
+    auto [M, body_screws ] = ur3e_body_chain(); // Fetch M matrix and screws
+    Eigen::Matrix4d T = Eigen::Matrix4d::Identity();  // Initialize Transformation matrix
+
+    for (int i = body_screws.size(); i > 0; i--) { // Iterate from end-detector to base
+        if (i == body_screws.size()) { // Set last column as corresponding screw axis
+            body_jacobian.block<6, 1> (0, i - 1) = body_screws[i - 1];
+            continue;
+        }
+        Eigen::MatrixXd adj;
+        Eigen::VectorXd body_t = -body_screws[i];
+        T *= matrix_exponential(body_t, current_joint_positions[i]);
+        adj = adjoint_matrix(T); // Define Adjoint matrix. (Transform screw axis from one fram to next)
+        body_jacobian.block<6, 1> (0, i - 1) = adj * body_screws[i - 1]; // Insert adj * screw into next column of jacobian
+    }
+    return body_jacobian;
+}
+
+// TASK 4
 
 
 
