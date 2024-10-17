@@ -55,13 +55,52 @@ void ur3e_test_jacobian(){
     ur3e_test_jacobian(math::std_vector_to_eigen(std::vector<double>{45.0, -20.0, 10.0, 2.5, 30.0, -50.0}) * math::deg_to_rad);
 }
 
-int main() {
+void ur3e_ik_test_pose(const Eigen::Vector3d &pos, const Eigen::Vector3d &zyx, const Eigen::VectorXd &j0){
+    std::cout << "Test from pose" << std::endl;
+    Eigen::Matrix4d t_sd = math::create_transformation_matrix(math::rotation_matrix_from_euler_zyx(zyx), pos);
+    auto [iterations, j_ik] = math::ur3e_ik_body(t_sd, j0);
+    Eigen::Matrix4d t_ik = math::ur3e_body_fk(j_ik);
+    math::print_pose(t_ik, " IK pose");
+    math::print_pose(t_sd, "Desired pose");
+    std::cout << "Converged after " << iterations << " iterations" << std::endl;
+    std::cout << "J_0: " << j0.transpose() * math::rad_to_deg << std::endl;
+    std::cout << "J_ik: " << j_ik.transpose() * math::rad_to_deg << std::endl << std::endl;
+}
+
+void ur3e_ik_test_configuration(const Eigen::VectorXd &joint_positions, const Eigen::VectorXd &j0){
+    std::cout << "Test from configuration" << std::endl;
+    Eigen::Matrix4d t_sd = math::ur3e_space_fk(joint_positions);
+    auto [iterations, j_ik] = math::ur3e_ik_body(t_sd, j0);
+    Eigen::Matrix4d t_ik = math::ur3e_body_fk(j_ik);
+    math::print_pose(t_ik, " IK pose");
+    math::print_pose(t_sd, "Desired pose");
+    std::cout << "Converged after " << iterations << " iterations" << std::endl;
+    std::cout << "J_0: " << j0.transpose() * math::rad_to_deg << std::endl;
+    std::cout << "J_d: " << joint_positions.transpose() * math::rad_to_deg << std::endl;
+    std::cout << "J_ik: " << j_ik.transpose() * math::rad_to_deg << std::endl << std::endl;
+}
+
+void ur3e_ik_test(){
+    Eigen::VectorXd j_t0 = math::std_vector_to_eigen(std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}) * math::deg_to_rad;
+    Eigen::VectorXd j_t1 = math::std_vector_to_eigen(std::vector<double>{0.0, 0.0, -89.0, 0.0, 0.0, 0.0}) * math::deg_to_rad;
+    ur3e_ik_test_pose(Eigen::Vector3d{0.3289, 0.22315, 0.36505}, Eigen::Vector3d{0.0, 90.0, -90.0} * math::deg_to_rad, j_t0);
+    ur3e_ik_test_pose(Eigen::Vector3d{0.3289, 0.22315, 0.36505}, Eigen::Vector3d{0.0, 90.0, -90.0} * math::deg_to_rad, j_t1);
+    Eigen::VectorXd j_t2 = math::std_vector_to_eigen(std::vector<double>{50.0, -30.0, 20, 0.0, -30.0, 50.0}) * math::deg_to_rad;
+    Eigen::VectorXd j_d1 = math::std_vector_to_eigen(std::vector<double>{45.0, -20.0, 10.0, 2.5, 30.0, -50.0}) * math::deg_to_rad;
+    ur3e_ik_test_configuration(j_d1, j_t0);
+    ur3e_ik_test_configuration(j_d1, j_t2);
+}
+
+
+int main(){/*
     std::cout << "TASK 1" << std::endl;
     ur3e_test_fk();
     std::cout << "TASK 2" << std::endl;
-    test_root_find();
+    test_root_find();*/
     std::cout << "TASK 3" << std::endl;
-    ur3e_test_jacobian();
+    // ur3e_test_jacobian();
+    std::cout << "TASK 4" << std::endl;
+    ur3e_ik_test();
     return 0;
 }
 

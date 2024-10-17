@@ -243,7 +243,7 @@ Eigen::Matrix4d math::matrix_exponential(const Eigen::VectorXd &screw, double th
 }
 
 // Implement matrix logarithm for Transformation matrices
-std::pair<Eigen::Vector3d, double> math::transformation_matrix_to_exponential(const Eigen::Matrix4d &T) {
+std::pair<Eigen::Vector3d, double> math::matrix_logarithm(const Eigen::Matrix4d &T) {
     Eigen::Matrix3d R = T.block<3, 3>(0, 0);  // Extract rotation matrix
     Eigen::Vector3d p = T.block<3, 1>(0, 3);  // Extract translation vector
 
@@ -572,7 +572,7 @@ Eigen::MatrixXd math::ur3e_body_jacobian(const Eigen::VectorXd &current_joint_po
     auto [M, body_screws ] = ur3e_body_chain(); // Fetch M matrix and screws
     Eigen::Matrix4d T = Eigen::Matrix4d::Identity();  // Initialize Transformation matrix
 
-    for (int i = body_screws.size(); i > 0; i--) { // Iterate from end-detector to base
+    for (int i = int(body_screws.size()); i > 0; i--) { // Iterate from end-detector to base
         if (i == body_screws.size()) { // Set last column as corresponding screw axis
             body_jacobian.block<6, 1> (0, i - 1) = body_screws[i - 1];
             continue;
@@ -587,6 +587,54 @@ Eigen::MatrixXd math::ur3e_body_jacobian(const Eigen::VectorXd &current_joint_po
 }
 
 // TASK 4
+
+std::pair<size_t, Eigen::VectorXd> math::ur3e_ik_body(const Eigen::Matrix4d &T_sd, const Eigen::VectorXd &current_joint_positions, double gamma, double v_e, double w_e) {
+    double theta;
+    Eigen::VectorXd V_b(6);  // Ensure V_b has 6 elements for SE(3) twist vector
+    Eigen::Matrix4d T_sb = ur3e_space_fk(current_joint_positions);  // Initial guess for joint position
+    Eigen::Matrix4d T_bd = T_sb.inverse() * T_sd;  // Calculate desired configuration in body frame
+
+    std::tie(V_b, theta) = matrix_logarithm(T_bd);  // Compute the twist Vb = log Tbd(theta)
+    V_b *= theta;  // Scale the twist by theta
+    Eigen::VectorXd position = current_joint_positions;  // Current joint position as a non-const
+
+    size_t iteration_count = 0;
+    while ((V_b.head(3).norm() > v_e) || (V_b.tail(3).norm() > w_e)) {
+        Eigen::MatrixXd jacobian_B = ur3e_body_jacobian(position);  // Compute body jacobian
+
+        // Debug: print the sizes of Jacobian and twist
+        std::cout << "Jacobian size: " << jacobian_B.rows() << "x" << jacobian_B.cols() << std::endl;
+        std::cout << "Twist vector size: " << V_b.size() << std::endl;
+
+        // Ensure dimensions match for the pseudoinverse operation
+        Eigen::VectorXd delta_theta = gamma * jacobian_B.completeOrthogonalDecomposition().pseudoInverse() * V_b;
+
+        // Debug: print the size of delta_theta
+        std::cout << "Delta theta size: " << delta_theta.size() << std::endl;
+
+        // Update joint positions
+        position += delta_theta;
+
+        // Update forward kinematics
+        T_sb = ur3e_space_fk(position);
+
+        // Recalculate error in the body frame
+        T_bd = T_sb.inverse() * T_sd;
+        std::tie(V_b, theta) = matrix_logarithm(T_bd);  // Compute the twist Vb = log Tbd(theta)
+        V_b *= theta;  // Scale by theta
+
+        iteration_count++;
+        if (iteration_count > 5000) {
+            std::cout << "Reached max iterations: " << iteration_count << std::endl;
+            break;
+        }
+    }
+
+    // Return the number of iterations and the final joint positions
+    return std::make_pair(iteration_count, position);
+}
+
+
 
 
 

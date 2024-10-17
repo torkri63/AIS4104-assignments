@@ -23,7 +23,7 @@ namespace math {
     std::pair<Eigen::Vector3d, double> rotation_matrix_to_exponential(const Eigen::Matrix3d &r);
     Eigen::Matrix4d exponential_to_transformation_matrix(const Eigen::Vector3d &w, const Eigen::Vector3d &v, double theta);
     Eigen::Matrix4d exponential_to_transformation_matrix(const Eigen::VectorXd &screw, double theta);
-    std::pair<Eigen::Vector3d, double> transformation_matrix_to_exponential(const Eigen::Matrix4d &T);
+    std::pair<Eigen::Vector3d, double> matrix_logarithm(const Eigen::Matrix4d &T);
     Eigen::Matrix4d matrix_exponential(const Eigen::VectorXd &screw, double theta);
     void print_pose(const std::string &label, const Eigen::Matrix4d &tf);
     Eigen::Matrix4d planar_3r_fk_transform(const std::vector<double> &joint_positions);
@@ -42,6 +42,7 @@ namespace math {
     std::pair<uint32_t, double> gradient_descent_root_find(const std::function<double(double)> &f, double x_0, double gamma = 0.1, double dx_0 = 0.5, double eps = 10e-7);
     Eigen::MatrixXd ur3e_space_jacobian(const Eigen::VectorXd &current_joint_positions);
     Eigen::MatrixXd ur3e_body_jacobian(const Eigen::VectorXd &current_joint_positions);
+    std::pair<size_t, Eigen::VectorXd> ur3e_ik_body(const Eigen::Matrix4d &T_sd, const Eigen::VectorXd &current_joint_positions, double gamma = 1e-2, double v_e = 4e-3, double w_e = 4e-3);
 }
 
 #endif
